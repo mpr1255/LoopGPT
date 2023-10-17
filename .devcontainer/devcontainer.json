@@ -1,14 +1,10 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "Python 3 with Flask and OpenAI",
-	"image": "mcr.microsoft.com/devcontainers/python:1-3.11-bullseye",
-	
+	"name": "LoopGPT",
+	"build": { "dockerfile": "../Dockerfile" },
 	"features": {
 		"ghcr.io/devcontainers-contrib/features/black:2": {}
-	}
-	"forwardPorts": [5000],
-	"postCreateCommand": "pip3 install Flask openai markdown",
+	},
+	"forwardPorts": [5001],
 	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash"
 	},
