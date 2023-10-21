@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, Query, HTTPException
+from fastapi import FastAPI, WebSocket, Query, HTTPException, WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import openai
