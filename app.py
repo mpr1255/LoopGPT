@@ -15,6 +15,13 @@ openai.api_key = "your_openai_api_key_here"  # Replace with your actual OpenAI A
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 def truncate_text(text, max_tokens=4000):
     encoding = tiktoken.get_encoding("cl100k_base")
