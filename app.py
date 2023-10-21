@@ -1,51 +1,59 @@
-#%%
+from fastapi import FastAPI, WebSocket, Query, HTTPException
+from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 import openai
-import markdown
+import websockets
+import os
 import re
-from flask import Flask, render_template, request, jsonify
+import markdown
 
-app = Flask(__name__)
+app = FastAPI()
+openai.api_key = "your_openai_api_key_here"  # Replace with your actual OpenAI API key
 
-@app.route('/')
-def index():
-    return render_template('index.html')
 
-@app.route('/process', methods=['POST'])
-def process():
-    data = request.json
-    # print(data)
-    api_key = data['api_key']
-    model = data['model']
-    prompt = data['prompt']
-    text = data['text']
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-    split_text_chunks = re.split(r'\n[=]+\n', text)
+@app.get("/")
+def read_root():
+    return RedirectResponse(url='/static/index.html')
 
-    split_text_chunks = [chunk.strip() for chunk in split_text_chunks if chunk.strip()] 
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        # await websocket.send_json({"output": "Connection established!!"})
+        while True:
+            data = await websocket.receive_json()
+            api_key = data['api_key']
+            model = data['model']
+            prompt = data['prompt']
+            text = data['text']
 
-    openai.api_key = api_key
-    output_html = ""
+            split_text_chunks = re.split(r'\n[=]+\n', text)
+            split_text_chunks = [chunk.strip() for chunk in split_text_chunks if chunk.strip()]
 
-    for chunk in split_text_chunks:
-        full_prompt = f"{prompt}\n{chunk}"
-        # print(chunk)
-        print(full_prompt)
-        try:
-            response = openai.ChatCompletion.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": full_prompt},
-                ])
-            
-            output_text = response['choices'][0]['message']['content']
-            # print(output_text)
-            output_html += markdown.markdown(output_text)
-        except Exception as e:
-            output_html += f"<p>Error in API call: {e}</p>"
+            openai.api_key = api_key  # Setting API key dynamically
 
-    return jsonify({"output": output_html})
-
-if __name__ == '__main__':
-    app.debug = True
-    app.run()
+            for chunk in split_text_chunks:
+                full_prompt = f"{prompt}\n{chunk}"
+                try:
+                    response = openai.ChatCompletion.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": "You are a helpful assistant."},
+                            {"role": "user", "content": full_prompt},
+                        ],
+                        stream=True
+                    )
+                    for message_chunk in response:
+                        if 'choices' in message_chunk:
+                            delta_content = message_chunk['choices'][0].get('delta', {}).get('content', '')
+                            if delta_content:
+                                # print(delta_content)
+                                await websocket.send_json({"output": delta_content})
+                except Exception as e:
+                    await websocket.send_json({"output": f"Error in API call: {e}"})
+    except WebSocketDisconnect as e:
+        print(f"WebSocket disconnected with code: {e.code}")
+    except Exception as e:
+        print(f"An exception occurred: {e}")
