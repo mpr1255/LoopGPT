@@ -3,7 +3,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install git
 
 # Install Python packages
-RUN pip3 install openai markdown fastapi uvicorn websockets tiktoken
+RUN pip3 install openai markdown fastapi uvicorn[standard] websockets tiktoken
 
 # Copy your code into the container
 COPY . /app
