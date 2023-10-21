@@ -97,7 +97,7 @@ async function initWebSocket() {
             resolve();
             return;
         }
-        websocket = new WebSocket('ws://loopgpt.onrender.com/ws');
+        websocket = new WebSocket('wss://loopgpt.onrender.com/ws');
         websocket.onopen = () => {
             console.log("WebSocket opened.");
             resolve();
