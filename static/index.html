@@ -97,7 +97,7 @@ async function initWebSocket() {
             resolve();
             return;
         }
-        websocket = new WebSocket('ws://127.0.0.1:8000/ws');
+        websocket = new WebSocket('ws://127.0.0.1:5001/ws');
         websocket.onopen = () => {
             console.log("WebSocket opened.");
             resolve();

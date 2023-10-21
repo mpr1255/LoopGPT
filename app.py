@@ -16,7 +16,7 @@ openai.api_key = "your_openai_api_key_here"  # Replace with your actual OpenAI A
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-def truncate_text(text, max_tokens=3500):
+def truncate_text(text, max_tokens=4000):
     encoding = tiktoken.get_encoding("cl100k_base")
     tokens = encoding.encode(text)
     total_tokens = len(tokens)
