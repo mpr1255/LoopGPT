@@ -1,7 +1,9 @@
+print('test')
 from fastapi import FastAPI, WebSocket, Query, HTTPException, WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import openai
+import tiktoken
 import websockets
 import os
 import re
@@ -12,6 +14,19 @@ openai.api_key = "your_openai_api_key_here"  # Replace with your actual OpenAI A
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+def truncate_text(text, max_tokens=3500):
+    encoding = tiktoken.get_encoding("cl100k_base")
+    tokens = encoding.encode(text)
+    total_tokens = len(tokens)
+    if total_tokens <= max_tokens:
+        return text  # Return the original text if it's short enough
+
+    keep_each_side = max_tokens // 2
+    truncated_tokens = tokens[:keep_each_side] + tokens[-keep_each_side:]
+    truncated_text = encoding.decode(truncated_tokens)
+    return truncated_text
 
 @app.get("/")
 def read_root():
@@ -35,7 +50,8 @@ async def websocket_endpoint(websocket: WebSocket):
             openai.api_key = api_key  # Setting API key dynamically
 
             for chunk in split_text_chunks:
-                full_prompt = f"{prompt}\n{chunk}"
+                truncated_chunk = truncate_text(chunk)
+                full_prompt = f"{prompt}\n{truncated_chunk}"
                 try:
                     response = openai.ChatCompletion.create(
                         model=model,
@@ -51,6 +67,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             if delta_content:
                                 # print(delta_content)
                                 await websocket.send_json({"output": delta_content})
+                            else:
+                                await websocket.send_json({"output": "\n\n"})
                 except Exception as e:
                     await websocket.send_json({"output": f"Error in API call: {e}"})
     except WebSocketDisconnect as e:
