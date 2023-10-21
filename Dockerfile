@@ -12,4 +12,4 @@ COPY . /app
 WORKDIR /app
 
 # Run your application
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5001"]
+CMD ["uvicorn", "script_name:app", "--host", "0.0.0.0", "--port", "8000"]
