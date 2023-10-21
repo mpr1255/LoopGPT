@@ -56,6 +56,11 @@
           <label for="text" class="form-label">Text:</label>
           <textarea id="text" name="text" class="form-control thick-border"></textarea>
         </div>
+        <div class="mb-3 form-check">
+          <input type="checkbox" class="form-check-input" id="is_url">
+          <label class="form-check-label" for="is_url">Contains URLs</label>
+        </div>
+        
         <button type="button" onclick="submitForm()" class="btn btn-primary">Submit</button>
         <button type="button" onclick="stopModel()" class="btn btn-danger">STOP</button>
         <button type="button" onclick="clearOutput()" class="btn btn-secondary">Clear Output</button>
@@ -97,7 +102,11 @@ async function initWebSocket() {
             resolve();
             return;
         }
-        websocket = new WebSocket('wss://loopgpt.onrender.com/ws');
+        if (window.location.hostname === "localhost") {
+          websocket = new WebSocket('ws://127.0.0.1:8000/ws');
+        } else {
+          websocket = new WebSocket('wss://loopgpt.onrender.com/ws');
+        }
         websocket.onopen = () => {
             console.log("WebSocket opened.");
             resolve();
@@ -135,12 +144,13 @@ async function submitForm() {
     const prompt = document.getElementById("prompt").value;
     const text = document.getElementById("text").value;
     const model = document.getElementById("model").value;
+    const is_url = document.getElementById("is_url").checked;  // Get the state of the tick box
 
     if (!apiKey || !prompt || !text || !model) {
         alert("All fields are required.");
         return;
     }
-    const data = JSON.stringify({ model: model, api_key: apiKey, prompt: prompt, text: text });
+    const data = JSON.stringify({ model: model, api_key: apiKey, prompt: prompt, text: text, is_url: is_url });  // Include is_url in the data
 
     try {
         await initWebSocket();
@@ -150,6 +160,7 @@ async function submitForm() {
         alert(error);
     }
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
     initWebSocket().catch(error => alert(error));

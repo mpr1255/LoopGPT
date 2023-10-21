@@ -1,18 +1,33 @@
-print('test')
+print('test.')
 from fastapi import FastAPI, WebSocket, Query, HTTPException, WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import openai
+import logging
 import tiktoken
 import websockets
 import os
 import re
 import markdown
+from bs4 import BeautifulSoup
+import requests
+import re
 
 app = FastAPI()
 openai.api_key = "your_openai_api_key_here"  # Replace with your actual OpenAI API key
 
+logging.basicConfig(filename='app.log', level=logging.DEBUG)
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.DEBUG)
+root_logger.addHandler(stream_handler)
+
+uvicorn_logger = logging.getLogger("uvicorn.access")
+uvicorn_logger.setLevel(logging.DEBUG)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -47,17 +62,39 @@ async def read_root():
     return content
 
 
+def extract_urls(text):
+    url_regex = re.compile(
+        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    )
+    return url_regex.findall(text)
+
+def fetch_url_content(urls):
+    text_content = ""
+    for url in urls:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            text_content += soup.get_text(separator='\n', strip=True) + '\n'
+        except requests.RequestException as e:
+            text_content += f"Error fetching {url}: {str(e)}\n"
+    return text_content
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
-        # await websocket.send_json({"output": "Connection established!!"})
         while True:
             data = await websocket.receive_json()
             api_key = data['api_key']
             model = data['model']
             prompt = data['prompt']
             text = data['text']
+            is_url = data.get('is_url', False)  # Assumes a new 'is_url' field from frontend
+
+            if is_url:
+                urls = extract_urls(text)
+                text = fetch_url_content(urls)
 
             split_text_chunks = re.split(r'\n[=]+\n', text)
             split_text_chunks = [chunk.strip() for chunk in split_text_chunks if chunk.strip()]
@@ -65,6 +102,7 @@ async def websocket_endpoint(websocket: WebSocket):
             openai.api_key = api_key  # Setting API key dynamically
 
             for chunk in split_text_chunks:
+                logging.debug(chunk)
                 truncated_chunk = truncate_text(chunk)
                 full_prompt = f"{prompt}\n{truncated_chunk}"
                 try:
@@ -77,10 +115,11 @@ async def websocket_endpoint(websocket: WebSocket):
                         stream=True
                     )
                     for message_chunk in response:
+                        logging.debug(message_chunk)
                         if 'choices' in message_chunk:
                             delta_content = message_chunk['choices'][0].get('delta', {}).get('content', '')
                             if delta_content:
-                                # print(delta_content)
+                                logging.debug(delta_content)
                                 await websocket.send_json({"output": delta_content})
                             else:
                                 await websocket.send_json({"output": "\n\n"})

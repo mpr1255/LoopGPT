@@ -1,21 +1,27 @@
-import asyncio
-import websockets
+from fastapi.testclient import TestClient
 import json
+from app import app  # Replace 'main' with the name of your FastAPI script
 
-async def hello():
-    uri = "ws://localhost:8000/ws"
-    async with websockets.connect(uri) as websocket:
+client = TestClient(app)
+
+def test_read_root():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "html" in response.headers["content-type"]
+
+def test_websocket_endpoint():
+    with client.websocket_connect("/ws") as websocket:
         data = {
-            'api_key': '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',
-            'model': 'gpt-3.5-turbo',
-            'prompt': 'Your prompt here',
-            'text': 'Chunk1\n=======\nChunk2\n=======\nChunk3'
+            'api_key': 'your_openai_api_key_here',  # Replace with your actual OpenAI API key for testing
+            'model': 'gpt-3.5-turbo',  # Replace with a model name for testing
+            'prompt': 'Translate the following English text to French: ',
+            'text': 'Hello, world!'
         }
-        await websocket.send(json.dumps(data))
-
-        while True:
-            response = await websocket.recv()
-            print(response)
+        websocket.send_json(data)
+        response = json.loads(websocket.receive_text())
+        assert 'output' in response
+        # Add more specific assertions based on what you expect to receive
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(hello())
+    test_read_root()
+    test_websocket_endpoint()
