@@ -39,14 +39,20 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-def truncate_text(text, max_tokens=4000):
+def truncate_text(text, prompt, max_tokens=4097):
     encoding = tiktoken.get_encoding("cl100k_base")
+    
+    prompt_tokens = encoding.encode(prompt)
+    prompt_token_count = len(prompt_tokens)
+    
+    adjusted_max_tokens = max_tokens - prompt_token_count
+    
     tokens = encoding.encode(text)
     total_tokens = len(tokens)
-    if total_tokens <= max_tokens:
+    if total_tokens <= adjusted_max_tokens:
         return text  # Return the original text if it's short enough
-
-    keep_each_side = max_tokens // 2
+    
+    keep_each_side = adjusted_max_tokens // 2
     truncated_tokens = tokens[:keep_each_side] + tokens[-keep_each_side:]
     truncated_text = encoding.decode(truncated_tokens)
     return truncated_text
@@ -103,7 +109,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
             for chunk in split_text_chunks:
                 logging.debug(chunk)
-                truncated_chunk = truncate_text(chunk)
+                truncated_chunk = truncate_text(chunk, prompt)
                 full_prompt = f"{prompt}\n{truncated_chunk}"
                 try:
                     response = openai.ChatCompletion.create(
