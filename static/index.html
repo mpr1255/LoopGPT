@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ChatGPT Utility</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.0.0/turndown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<style>
+  .thick-border {
+    border: 2px solid #ccc;
+    border-radius: 5px;
+  }
+  .form-label {
+    font-weight: bold;
+    margin-top: 1em;
+  }
+  .container {
+    max-width: 1100px;
+    margin: auto;
+  }
+  .btn-primary {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+</style>
+
+</head>
+<body>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-6">
+      <form id="mainForm">
+        <div class="mb-3">
+          <label for="model" class="form-label">Model:</label>
+          <select id="model" name="model" class="form-control thick-border">
+            <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+            <option value="gpt-4">gpt-4</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="api_key" class="form-label">API Key:</label>
+          <input type="text" id="api_key" name="api_key" class="form-control thick-border">
+        </div>
+        <div class="mb-3">
+          <label for="prompt" class="form-label">Prompt:</label>
+          <textarea id="prompt" name="prompt" class="form-control thick-border"></textarea>
+        </div>
+        <div class="mb-3">
+          <label for="text" class="form-label">Text:</label>
+          <textarea id="text" name="text" class="form-control thick-border"></textarea>
+        </div>
+        <button type="button" onclick="submitForm()" class="btn btn-primary">Submit</button>
+        <button type="button" onclick="stopModel()" class="btn btn-danger">STOP</button>
+        <button type="button" onclick="clearOutput()" class="btn btn-secondary">Clear Output</button>
+        <button type="button" id="copyButton" class="btn btn-success">Copy</button>
+
+      </form>
+    </div>
+    <div class="col-md-6">
+      <div id="output" class="thick-border rounded p-3" style="height: 500px; overflow-y: auto; resize: both;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Initialize turndown service
+// const turndownService = new TurndownService();
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        console.log("Copied to clipboard");
+    }).catch(function(err) {
+        console.log("Error in copying text: ", err);
+    });
+}
+
+// Add click event listener to the "Copy Formatted" button
+document.getElementById("copyButton").addEventListener("click", function() {
+    const outputElement = document.getElementById("output");
+    
+    // Copy the innerHTML (formatted HTML) directly to the clipboard
+    copyToClipboard(outputElement.innerText);
+});
+
+let websocket;
+
+async function initWebSocket() {
+    return new Promise((resolve, reject) => {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            resolve();
+            return;
+        }
+        websocket = new WebSocket('ws://localhost:8000/ws');
+        websocket.onopen = () => {
+            console.log("WebSocket opened.");
+            resolve();
+        };
+        websocket.onmessage = (event) => {
+            console.log("WebSocket message received:", event.data);
+            const jsonResponse = JSON.parse(event.data);
+            const outputElement = document.getElementById("output");
+            const formattedOutput = jsonResponse.output.replace(/\n/g, '<br>'); // Replace \n with <br>
+            outputElement.innerHTML += formattedOutput;
+        };
+        websocket.onerror = (event) => {
+            console.log("WebSocket error:", event);
+            reject(`WebSocket Error: ${event}`);
+        };
+    });
+}
+
+function clearOutput() {
+    document.getElementById("output").innerHTML = "";
+}
+
+function stopModel() {
+    if (websocket && websocket.readyState === WebSocket.OPEN) {
+        websocket.close();
+    }
+}
+
+async function submitForm() {
+    const apiKey = document.getElementById("api_key").value;
+    const prompt = document.getElementById("prompt").value;
+    const text = document.getElementById("text").value;
+    const model = document.getElementById("model").value;
+
+    if (!apiKey || !prompt || !text || !model) {
+        alert("All fields are required.");
+        return;
+    }
+    const data = JSON.stringify({ model: model, api_key: apiKey, prompt: prompt, text: text });
+
+    try {
+        await initWebSocket();
+        console.log("Sending data via WebSocket...");
+        websocket.send(data);
+    } catch (error) {
+        alert(error);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    initWebSocket().catch(error => alert(error));
+});
+
+
+</script>
+
+</body>
+</html>
