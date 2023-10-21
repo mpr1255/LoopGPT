@@ -110,7 +110,11 @@ async function initWebSocket() {
             outputElement.innerHTML += formattedOutput;
         };
         websocket.onerror = (event) => {
-            console.log("WebSocket error:", event);
+            console.error("WebSocket error observed:", event);
+            // Log all properties of the event object for debugging
+            for (const prop in event) {
+                console.log(`${prop}: ${event[prop]}`);
+            }
             reject(`WebSocket Error: ${event}`);
         };
     });

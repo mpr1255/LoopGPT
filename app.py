@@ -28,9 +28,16 @@ def truncate_text(text, max_tokens=3500):
     truncated_text = encoding.decode(truncated_tokens)
     return truncated_text
 
-@app.get("/")
-def read_root():
-    return RedirectResponse(url='/static/index.html')
+# @app.get("/")
+# def read_root():
+#     return RedirectResponse(url='/static/index.html')
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    with open("static/index.html", "r") as f:
+        content = f.read()
+    return content
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -75,3 +82,6 @@ async def websocket_endpoint(websocket: WebSocket):
         print(f"WebSocket disconnected with code: {e.code}")
     except Exception as e:
         print(f"An exception occurred: {e}")
+        # Optionally log the full traceback
+        import traceback
+        print(traceback.format_exc())
