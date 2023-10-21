@@ -102,13 +102,14 @@ async function initWebSocket() {
             resolve();
             return;
         }
-        if (window.location.hostname === "localhost") {
+        if (window.location.hostname === "127.0.0.1") {
           websocket = new WebSocket('ws://127.0.0.1:8000/ws');
         } else {
           websocket = new WebSocket('wss://loopgpt.onrender.com/ws');
         }
         websocket.onopen = () => {
             console.log("WebSocket opened.");
+            console.log(websocket)
             resolve();
         };
         websocket.onmessage = (event) => {

@@ -1,4 +1,4 @@
-print('test.')
+#%%
 from fastapi import FastAPI, WebSocket, Query, HTTPException, WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,7 +30,7 @@ uvicorn_logger = logging.getLogger("uvicorn.access")
 uvicorn_logger.setLevel(logging.DEBUG)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
+#%%
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins
@@ -39,7 +39,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-def truncate_text(text, prompt, max_tokens=4097):
+def truncate_text(chunk, prompt, max_tokens=3800):
     encoding = tiktoken.get_encoding("cl100k_base")
     
     prompt_tokens = encoding.encode(prompt)
@@ -47,15 +47,21 @@ def truncate_text(text, prompt, max_tokens=4097):
     
     adjusted_max_tokens = max_tokens - prompt_token_count
     
-    tokens = encoding.encode(text)
+    tokens = encoding.encode(chunk)
     total_tokens = len(tokens)
-    if total_tokens <= adjusted_max_tokens:
-        return text  # Return the original text if it's short enough
     
-    keep_each_side = adjusted_max_tokens // 2
-    truncated_tokens = tokens[:keep_each_side] + tokens[-keep_each_side:]
+    if total_tokens <= adjusted_max_tokens:
+        print('returned unedited')
+        return chunk  # Return the original text if it's short enough
+    
+    excess_tokens = total_tokens - adjusted_max_tokens
+    truncate_each_side = excess_tokens // 2
+    print('halving chunk')
+    
+    truncated_tokens = tokens[truncate_each_side:-truncate_each_side]
     truncated_text = encoding.decode(truncated_tokens)
     return truncated_text
+
 
 # @app.get("/")
 # def read_root():
@@ -76,15 +82,21 @@ def extract_urls(text):
 
 def fetch_url_content(urls):
     text_content = ""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
     for url in urls:
         try:
-            response = requests.get(url)
+            response = requests.get(url, headers=headers)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             text_content += soup.get_text(separator='\n', strip=True) + '\n'
         except requests.RequestException as e:
             text_content += f"Error fetching {url}: {str(e)}\n"
     return text_content
+
+
+#%%
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -98,19 +110,19 @@ async def websocket_endpoint(websocket: WebSocket):
             text = data['text']
             is_url = data.get('is_url', False)  # Assumes a new 'is_url' field from frontend
 
-            if is_url:
-                urls = extract_urls(text)
-                text = fetch_url_content(urls)
-
-            split_text_chunks = re.split(r'\n[=]+\n', text)
-            split_text_chunks = [chunk.strip() for chunk in split_text_chunks if chunk.strip()]
-
             openai.api_key = api_key  # Setting API key dynamically
 
-            for chunk in split_text_chunks:
-                logging.debug(chunk)
-                truncated_chunk = truncate_text(chunk, prompt)
-                full_prompt = f"{prompt}\n{truncated_chunk}"
+            # Determine chunks based on is_url flag
+            # is_url = True
+            if is_url:
+                urls = extract_urls(text)
+                chunks = [{"url": url, "content": fetch_url_content([url])} for url in urls]
+            else:
+                chunks = [{"content": chunk.strip()} for chunk in re.split(r'\n[=]+\n', text) if chunk.strip()]
+
+            for chunk in chunks:
+                truncated_chunk = truncate_text(chunk["content"], prompt)  # Truncate if necessary
+                full_prompt = f"{prompt}\n{chunk.get('url', '')}\n{truncated_chunk}"
                 try:
                     response = openai.ChatCompletion.create(
                         model=model,
@@ -131,6 +143,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 await websocket.send_json({"output": "\n\n"})
                 except Exception as e:
                     await websocket.send_json({"output": f"Error in API call: {e}"})
+
     except WebSocketDisconnect as e:
         print(f"WebSocket disconnected with code: {e.code}")
     except Exception as e:
