@@ -1,62 +1,65 @@
 # LoopGPT
 
-This is an absolutely barebones implementation of the idea: "I want chatgpt to loop over this input with the same prompt each time." 
+This minimal implementation enables a continuous loop of interactions with ChatGPT over a given input, using the same prompt each time, further enriched to handle URLs.
 
-Mainly done for learning purposes and a small work thing. Of course this entire readme and all the code was straight up gpt4 with some angry prompting. 
+Mainly crafted for learning and a minor work requirement, with some inspiration from GPT-4.
 
 ## Dependencies
 
-- Flask
+- FastAPI
 - OpenAI
 - Markdown
+- BeautifulSoup
+- requests
 
 ## Setup
 
-1. Clone this repository to your local machine.
+1. Clone this repository to your local machine:
 
    ```bash
    git clone <repository_url>
    ```
 
-2. Navigate to the project directory.
+2. Navigate to the project directory:
 
    ```bash
    cd <project_directory>
    ```
 
-3. Build the Docker image (assuming you have Docker installed).
+3. Build the Docker image (ensure Docker is installed):
 
    ```bash
-   docker build -t flask-openai-app .
+   docker build -t loopgpt .
    ```
 
-4. Run the Docker container.
+4. Run the Docker container:
 
    ```bash
-   docker run -p 5001:5001 flask-openai-app
+   docker run -d -p 8000:8000 loopgpt
    ```
 
-   This will start the application and make it accessible at `http://localhost:5001`.
+   Now, the application is accessible at `http://localhost:8000`.
 
 ## Usage
 
-1. Open a web browser and navigate to `http://localhost:5001`.
-
-2. You'll find fields for entering your OpenAI API key, the model to use, a prompt, and text that you want to process.
-
-3. After filling in these fields, click on the 'Submit' button to process the text. The resulting text will be displayed on the page.
+1. Open a browser and navigate to `http://localhost:8000`.
+2. Provide your OpenAI API key, choose the model, specify a prompt, and enter text or URLs.
+3. Click 'Submit' to process. The output is displayed on the right.
 
 ## Features
 
-- **Chat Completion**: Uses OpenAI's API to perform chat completion based on the given model and prompt.
-- **Markdown Rendering**: The output text is rendered as Markdown.
+- **Chat Completion**: Utilizes OpenAI's API for chat completion based on the specified model and prompt.
+- **URL Content Fetching**: Extracts and processes text content from provided URLs.
+- **Text Truncation**: Handles large text inputs by truncating them to fit model's token limits.
+- **Markdown Rendering**: Outputs are rendered as Markdown.
+- **Real-Time Interaction**: Utilizes WebSocket for real-time interaction with the model.
 
 ## Code Structure
 
-- `Dockerfile`: Sets up the Docker image.
-- `app.py`: Contains the Flask application logic.
-- `index.html`: The HTML file that creates the frontend.
+- `Dockerfile`: Defines the Docker image setup.
+- `app.py`: Holds the FastAPI application logic.
+- `index.html`: Provides the frontend interface.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is under the MIT License.
