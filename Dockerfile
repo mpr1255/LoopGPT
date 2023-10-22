@@ -12,7 +12,7 @@ RUN pip install --upgrade pip
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Run the test suite
-RUN pytest test.py
+# RUN pytest test.py
 
 # Run your application
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -100546,3 +100546,11 @@ INFO:uvicorn.error:Shutting down
 INFO:uvicorn.error:Waiting for application shutdown.
 INFO:uvicorn.error:Application shutdown complete.
 INFO:uvicorn.error:Finished server process [20240]
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): foreignpolicy.com:443
+DEBUG:urllib3.connectionpool:https://foreignpolicy.com:443 "GET /2019/12/11/cotton-china-uighur-labor-xinjiang-new-slavery/ HTTP/1.1" 200 None
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): foreignpolicy.com:443
+DEBUG:urllib3.connectionpool:https://foreignpolicy.com:443 "GET /2019/12/11/cotton-china-uighur-labor-xinjiang-new-slavery/ HTTP/1.1" 200 51551
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): chinaforum.org:443
+DEBUG:urllib3.connectionpool:https://chinaforum.org:443 "GET / HTTP/1.1" 200 None
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): dataverse.harvard.edu:443
+DEBUG:urllib3.connectionpool:https://dataverse.harvard.edu:443 "GET /dataset.xhtml?persistentId=doi:10.7910/DVN/B92UYJ HTTP/1.1" 200 None

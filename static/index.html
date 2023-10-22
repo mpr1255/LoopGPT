@@ -34,6 +34,31 @@
 <body>
 
 <div class="container">
+    <!-- Instructions Div -->
+    <div class="row mb-4">
+      <div class="col">
+        <h2>Instructions</h2>
+        <p>
+          Hello, this is a simple utility to provide a system message and a prompt and loop through some inputs given to the openai models.
+          gpt-3.5-turbo is the less sophisticated but cheaper model, the 16k is longer, and gpt4 is the best but most expensive. 
+          The system message guides the model and gives it a persona to adopt, while the prompt is for the actual task you want it to perform.
+          If you select "contains URLs", it won't process any text, it will simply visit any links you place, extract the text, and pass as much of it will fit into the model (truncating
+          text from the top and bottom evenly until it fits in the context window). Play around with different models to see which gets the
+          best response. If you don't pass in URLs but instead text, separate the chunks like this:
+        </p>
+        <pre>
+  chunk 1
+  
+  ====
+  
+  chunk 2
+  
+  ====
+  
+  chunk 3
+        </pre>
+      </div>
+    </div>
   <div class="row">
     <div class="col-md-6">
       <form id="mainForm">
@@ -41,12 +66,17 @@
           <label for="model" class="form-label">Model:</label>
           <select id="model" name="model" class="form-control thick-border">
             <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+            <option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</option>
             <option value="gpt-4">gpt-4</option>
           </select>
         </div>
         <div class="mb-3">
           <label for="api_key" class="form-label">API Key:</label>
           <input type="text" id="api_key" name="api_key" class="form-control thick-border">
+        </div>
+        <div class="mb-3">
+          <label for="system_message" class="form-label">System message:</label>
+          <textarea id="system_message" name="system_message" class="form-control thick-border"></textarea>
         </div>
         <div class="mb-3">
           <label for="prompt" class="form-label">Prompt:</label>
@@ -143,15 +173,16 @@ function stopModel() {
 async function submitForm() {
     const apiKey = document.getElementById("api_key").value;
     const prompt = document.getElementById("prompt").value;
+    const system_message = document.getElementById("system_message").value;
     const text = document.getElementById("text").value;
     const model = document.getElementById("model").value;
     const is_url = document.getElementById("is_url").checked;  // Get the state of the tick box
 
-    if (!apiKey || !prompt || !text || !model) {
+    if (!apiKey || !prompt || !text || !model || !system_message) {
         alert("All fields are required.");
         return;
     }
-    const data = JSON.stringify({ model: model, api_key: apiKey, prompt: prompt, text: text, is_url: is_url });  // Include is_url in the data
+    const data = JSON.stringify({ model: model, api_key: apiKey, prompt: prompt, system_message: system_message, text: text, is_url: is_url });  // Include is_url in the data
 
     try {
         await initWebSocket();

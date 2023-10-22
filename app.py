@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 import requests
 import re
 from newspaper import Article
+from newspaper import fulltext
 
 app = FastAPI()
 openai.api_key = "your_openai_api_key_here"  # Replace with your actual OpenAI API key
@@ -40,13 +41,12 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-def truncate_text(chunk, prompt, max_tokens=3800):
+def truncate_text(chunk, prompt, system_message, max_tokens=4000):
     encoding = tiktoken.get_encoding("cl100k_base")
     
-    prompt_tokens = encoding.encode(prompt)
-    prompt_token_count = len(prompt_tokens)
-    
-    adjusted_max_tokens = max_tokens - prompt_token_count
+    prompt_tokens_count = len(encoding.encode(prompt))
+    system_prompt_tokens_count = len(encoding.encode(system_message))
+    adjusted_max_tokens = max_tokens - prompt_tokens_count - system_prompt_tokens_count
     
     tokens = encoding.encode(chunk)
     total_tokens = len(tokens)
@@ -96,6 +96,7 @@ def fetch_url_content(urls):
             text_content += f"Error fetching {url}: {str(e)}\n"
     return text_content
 
+    
 
 #%%
 
@@ -107,6 +108,7 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_json()
             api_key = data['api_key']
             model = data['model']
+            system_message = data['system_message']
             prompt = data['prompt']
             text = data['text']
             is_url = data.get('is_url', False)  # Assumes a new 'is_url' field from frontend
@@ -114,7 +116,6 @@ async def websocket_endpoint(websocket: WebSocket):
             openai.api_key = api_key  # Setting API key dynamically
 
             # Determine chunks based on is_url flag
-            # is_url = True
             if is_url:
                 urls = extract_urls(text)
                 chunks = [{"url": url, "content": fetch_url_content([url])} for url in urls]
@@ -122,23 +123,25 @@ async def websocket_endpoint(websocket: WebSocket):
                 chunks = [{"content": chunk.strip()} for chunk in re.split(r'\n[=]+\n', text) if chunk.strip()]
 
             for chunk in chunks:
-                truncated_chunk = truncate_text(chunk["content"], prompt)  # Truncate if necessary
-                full_prompt = f"{prompt}\n{chunk.get('url', '')}\n{truncated_chunk}"
+                truncated_chunk = truncate_text(chunk["content"], prompt, system_message)  # Truncate if necessary
+                # print(truncated_chunk)
+                full_prompt = f"{prompt}\n SOURCE URL: {chunk.get('url', '')}\n{truncated_chunk}"
+                logging.debug(full_prompt)
                 try:
                     response = openai.ChatCompletion.create(
                         model=model,
                         messages=[
-                            {"role": "system", "content": "You are a helpful assistant."},
+                            {"role": "system", "content": system_message},
                             {"role": "user", "content": full_prompt},
                         ],
                         stream=True
                     )
                     for message_chunk in response:
-                        logging.debug(message_chunk)
+                        # logging.debug(message_chunk)
                         if 'choices' in message_chunk:
                             delta_content = message_chunk['choices'][0].get('delta', {}).get('content', '')
                             if delta_content:
-                                logging.debug(delta_content)
+                                # logging.debug(delta_content)
                                 await websocket.send_json({"output": delta_content})
                             else:
                                 await websocket.send_json({"output": "\n\n"})
