@@ -13,6 +13,7 @@ import markdown
 from bs4 import BeautifulSoup
 import requests
 import re
+from newspaper import Article
 
 app = FastAPI()
 openai.api_key = "your_openai_api_key_here"  # Replace with your actual OpenAI API key

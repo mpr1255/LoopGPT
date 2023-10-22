@@ -8,3 +8,4 @@ beautifulsoup4==4.10.0
 aiofiles
 pytest
 bs4
+newspaper3k
